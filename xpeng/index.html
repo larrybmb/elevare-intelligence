@@ -13,53 +13,49 @@
       align-items: center;
       justify-content: center;
       min-height: 100vh;
-      padding: 40px 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    .background-logo {
+      position: absolute;
+      right: 10%;
+      top: 50%;
+      transform: translateY(-50%);
+      opacity: 0.15;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .background-logo img {
+      width: 500px;
+      height: auto;
     }
     .access-container {
       background: #FFFFFF;
       border-radius: 12px;
-      max-width: 1000px;
-      width: 100%;
+      padding: 60px 80px;
+      max-width: 600px;
+      text-align: center;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      overflow: hidden;
+      position: relative;
+      z-index: 1;
+      margin-right: auto;
+      margin-left: 10%;
     }
-    .access-content {
-      padding: 60px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
+    .logo {
+      margin-bottom: 40px;
     }
-    .logo-section {
-      background: linear-gradient(135deg, #1A3A52 0%, #2A5570 100%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 60px;
-    }
-    .logo-section img {
-      width: 100%;
-      max-width: 350px;
-      height: auto;
-      opacity: 0.9;
-    }
-    .logo-text {
-      margin-bottom: 30px;
-    }
-    .logo-text h2 {
+    .logo h2 {
       color: #00D9C8;
       font-size: 24px;
       letter-spacing: 1px;
-      margin-bottom: 10px;
     }
     .lock-icon {
-      font-size: 48px;
+      font-size: 64px;
       color: #00D9C8;
-      margin-bottom: 20px;
+      margin-bottom: 24px;
     }
     h1 {
-      font-size: 32px;
+      font-size: 28px;
       font-weight: 700;
       color: #1A3A52;
       margin-bottom: 16px;
@@ -68,7 +64,7 @@
       font-size: 16px;
       color: #6B7280;
       line-height: 1.7;
-      margin-bottom: 28px;
+      margin-bottom: 32px;
     }
     .contact-button {
       display: inline-block;
@@ -81,7 +77,6 @@
       font-weight: 600;
       transition: all 0.2s;
       box-shadow: 0 4px 12px rgba(0, 217, 200, 0.3);
-      text-align: center;
     }
     .contact-button:hover {
       background: linear-gradient(135deg, #00B8A8 0%, #008B8B 100%);
@@ -89,58 +84,89 @@
       box-shadow: 0 6px 16px rgba(0, 217, 200, 0.4);
     }
     .footer-text {
-      margin-top: 28px;
+      margin-top: 32px;
       font-size: 13px;
       color: #9CA3AF;
     }
+    @media (max-width: 1024px) {
+      .access-container {
+        margin-left: auto;
+        margin-right: auto;
+      }
+      .background-logo {
+        right: 5%;
+        opacity: 0.08;
+      }
+      .background-logo img {
+        width: 350px;
+      }
+    }
     @media (max-width: 768px) {
       .access-container {
-        grid-template-columns: 1fr;
-      }
-      .logo-section {
-        padding: 40px;
-        order: -1;
-      }
-      .access-content {
         padding: 40px 30px;
       }
-      .logo-section img {
-        max-width: 250px;
+      .background-logo {
+        display: none;
       }
     }
   </style>
 </head>
 <body>
-  <div class="access-container">
-    <!-- LEFT: Access Content -->
-    <div class="access-content">
-      <div class="logo-text">
-        <h2>ELEVARE INSIGHTS</h2>
-      </div>
-      
-      <div class="lock-icon">🔒</div>
-      
-      <h1>Access Required</h1>
-      
-      <p>
-        This intelligence portal is available exclusively to authorised clients and partners. 
-        To request access or learn more about our market intelligence services, please get in touch.
-      </p>
-      
-      <a href="mailto:hello@elevare-insights.com?subject=Intelligence%20Portal%20Access%20Request" class="contact-button">
-        Request Access
-      </a>
-      
-      <p class="footer-text">
-        If you believe you should have access, please contact 
-        <strong>hello@elevare-insights.com</strong>
-      </p>
-    </div>
+  <!-- Logo on teal background (right side) -->
+  <div class="background-logo">
+    <img src="https://intelligence.elevare-insights.com/xpeng/images/logo.png" alt="Elevare Insights">
+  </div>
 
-    <!-- RIGHT: Logo on Teal Background -->
-    <div class="logo-section">
-      <img src="https://intelligence.elevare-insights.com/xpeng/images/logo.png" alt="Elevare Insights">
+  <!-- White card (left side) -->
+  <div class="access-container">
+    <div class="logo">
+      <h2>ELEVARE INSIGHTS</h2>
     </div>
+    
+    <div class="lock-icon">🔒</div>
+    
+    <h1>Access Required</h1>
+    
+    <p>
+      This intelligence portal is available exclusively to authorised clients and partners. 
+      To request access or learn more about our market intelligence services, please get in touch.
+    </p>
+    
+    <a href="mailto:hello@elevare-insights.com?subject=Intelligence%20Portal%20Access%20Request" class="contact-button">
+      Request Access
+    </a>
+    
+    <p class="footer-text">
+      If you believe you should have access, please contact 
+      <strong>hello@elevare-insights.com</strong>
+    </p>
   </div>
 </body>
 </html>
+```
+
+---
+
+## **WHAT THIS DOES:**
+
+✅ **White card on left side** - centered vertically, pushed slightly left  
+✅ **Logo on right side** - positioned on the teal background at 15% opacity  
+✅ **Original centered card design** - but positioned left to leave space for logo  
+✅ **Responsive** - hides logo on mobile, centers card  
+
+---
+
+## **THE LAYOUT:**
+```
+┌────────────────────────────────────────┐
+│  Teal Gradient Background              │
+│                                        │
+│  ┌─────────────┐                      │
+│  │   WHITE     │        [LOGO]        │
+│  │   CARD      │       (on teal)      │
+│  │  (Access    │                      │
+│  │  Required)  │                      │
+│  └─────────────┘                      │
+│                                        │
+└────────────────────────────────────────┘
+     LEFT SIDE           RIGHT SIDE
