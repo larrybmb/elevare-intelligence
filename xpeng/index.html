@@ -10,35 +10,52 @@
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
       background: linear-gradient(135deg, #1A3A52 0%, #2A5570 100%);
       display: flex;
-      align-items: centre;
-      justify-content: centre;
+      align-items: center;
+      justify-content: center;
       min-height: 100vh;
+      padding: 40px 20px;
+    }
+    .background-logo {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      opacity: 0.08;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .background-logo img {
+      width: 600px;
+      height: auto;
+      max-width: 80vw;
     }
     .access-container {
       background: #FFFFFF;
       border-radius: 12px;
       padding: 60px 80px;
       max-width: 600px;
-      text-align: centre;
+      text-align: center;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      position: relative;
+      z-index: 1;
     }
     .logo {
       margin-bottom: 40px;
     }
     .lock-icon {
       font-size: 64px;
-      colour: #00D9C8;
+      color: #00D9C8;
       margin-bottom: 24px;
     }
     h1 {
       font-size: 28px;
       font-weight: 700;
-      colour: #1A3A52;
+      color: #1A3A52;
       margin-bottom: 16px;
     }
     p {
       font-size: 16px;
-      colour: #6B7280;
+      color: #6B7280;
       line-height: 1.7;
       margin-bottom: 32px;
     }
@@ -46,7 +63,7 @@
       display: inline-block;
       padding: 14px 32px;
       background: linear-gradient(135deg, #00D9C8 0%, #00B8A8 100%);
-      colour: #FFFFFF;
+      color: #FFFFFF;
       text-decoration: none;
       border-radius: 8px;
       font-size: 16px;
@@ -62,11 +79,24 @@
     .footer-text {
       margin-top: 32px;
       font-size: 13px;
-      colour: #9CA3AF;
+      color: #9CA3AF;
+    }
+    @media (max-width: 768px) {
+      .access-container {
+        padding: 40px 30px;
+      }
+      .background-logo img {
+        width: 400px;
+      }
     }
   </style>
 </head>
 <body>
+  <!-- Large watermark logo in background -->
+  <div class="background-logo">
+    <img src="images/logo.png" alt="Elevare Insights">
+  </div>
+
   <div class="access-container">
     <div class="logo">
       <h2 style="color: #00D9C8; font-size: 24px; letter-spacing: 1px;">ELEVARE INSIGHTS</h2>
