@@ -1,0 +1,1453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dealer Intelligence Dashboard | Elevare Insights</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #F8FAFB; color: #1A3A52; line-height: 1.6; }
+    
+    /* Header */
+    .dashboard-header { background: linear-gradient(135deg, #1A3A52 0%, #2A5570 100%); padding: 16px 40px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); display: flex; justify-content: space-between; align-items: center; }
+    .logo-container img { height: 50px; width: auto; }
+    .client-badge { text-align: right; }
+    .client-badge-name { font-size: 18px; color: #FFFFFF; font-weight: 700; margin-top: 2px; }
+    
+    /* Navigation */
+    .nav-tabs { background: #FFFFFF; border-bottom: 2px solid #E8EDF2; padding: 0 40px; display: flex; gap: 0; overflow-x: auto; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); }
+    .nav-tab { padding: 16px 24px; font-size: 14px; font-weight: 500; color: #6B7280; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; white-space: nowrap; }
+    .nav-tab:hover { color: #00D9C8; background: rgba(0, 217, 200, 0.05); }
+    .nav-tab.active { color: #00D9C8; border-bottom-color: #00D9C8; background: #FFFFFF; font-weight: 600; }
+    
+    /* Layout */
+    .dashboard-container { display: flex; min-height: calc(100vh - 120px); }
+    .sidebar { width: 320px; background: #FFFFFF; border-right: 1px solid #E8EDF2; padding: 30px 24px; overflow-y: auto; box-shadow: 2px 0 8px rgba(0, 0, 0, 0.03); }
+    .main-content { flex: 1; padding: 30px 40px; overflow-y: auto; background: #F8FAFB; }
+    
+    /* Filters */
+    .filter-section { margin-bottom: 28px; }
+    .filter-title { font-size: 11px; font-weight: 700; color: #1A3A52; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #00D9C8; }
+    .filter-group { margin-bottom: 20px; }
+    .filter-label { font-size: 13px; color: #1A3A52; margin-bottom: 8px; display: block; font-weight: 600; }
+    .filter-select { width: 100%; padding: 10px 12px; background: #F8FAFB; border: 1px solid #D1D9E0; border-radius: 6px; color: #1A3A52; font-size: 14px; transition: all 0.2s; cursor: pointer; }
+    .filter-select:focus { outline: none; border-color: #00D9C8; box-shadow: 0 0 0 3px rgba(0, 217, 200, 0.1); background: #FFFFFF; }
+    .filter-input { width: 100%; padding: 10px 12px; background: #F8FAFB; border: 1px solid #D1D9E0; border-radius: 6px; color: #1A3A52; font-size: 14px; transition: all 0.2s; }
+    .filter-input:focus { outline: none; border-color: #00D9C8; box-shadow: 0 0 0 3px rgba(0, 217, 200, 0.1); background: #FFFFFF; }
+    
+    /* Checkbox */
+    .checkbox-group { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #F8FAFB; border: 1px solid #D1D9E0; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
+    .checkbox-group:hover { border-color: #00D9C8; background: rgba(0, 217, 200, 0.05); }
+    .checkbox-group input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: #00D9C8; }
+    .checkbox-group label { font-size: 13px; color: #1A3A52; font-weight: 500; cursor: pointer; flex: 1; }
+    
+    .filter-button { width: 100%; padding: 12px; background: linear-gradient(135deg, #00D9C8 0%, #00B8A8 100%); color: #FFFFFF; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0, 217, 200, 0.2); margin-bottom: 10px; }
+    .filter-button:hover { background: linear-gradient(135deg, #00B8A8 0%, #008B8B 100%); transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0, 217, 200, 0.3); }
+    
+    .filter-results { background: linear-gradient(135deg, rgba(0, 217, 200, 0.1) 0%, rgba(0, 184, 168, 0.05) 100%); border-radius: 8px; padding: 16px; margin-top: 20px; border-left: 4px solid #00D9C8; }
+    .filter-results h4 { font-size: 14px; color: #1A3A52; margin-bottom: 12px; font-weight: 700; }
+    .filter-stat { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; }
+    .filter-stat .label { color: #6B7280; font-weight: 500; }
+    .filter-stat .value { color: #1A3A52; font-weight: 700; }
+    
+    /* Content */
+    .content-header { margin-bottom: 30px; }
+    .content-title { font-size: 32px; font-weight: 700; color: #1A3A52; margin-bottom: 10px; }
+    .content-description { font-size: 15px; color: #6B7280; line-height: 1.7; }
+    
+    /* Chart Container */
+    .chart-container { 
+      background: #FFFFFF; 
+      border: 1px solid #E8EDF2; 
+      border-radius: 10px; 
+      padding: 15px 28px 28px 28px; 
+      margin-bottom: 24px; 
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04); 
+      max-width: 1300px;
+    }
+
+    .chart-header { 
+      margin-bottom: 14px; 
+      padding-bottom: 10px; 
+      border-bottom: 2px solid #F8FAFB; 
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .chart-title { 
+      font-size: 20px; 
+      font-weight: 600; 
+      color: #1A3A52; 
+    }
+
+    /* Upload Section */
+    .upload-section {
+      background: linear-gradient(135deg, rgba(0, 217, 200, 0.1) 0%, rgba(0, 184, 168, 0.05) 100%);
+      border: 3px dashed #00D9C8;
+      border-radius: 10px;
+      padding: 40px;
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .upload-section h3 {
+      font-size: 24px;
+      color: #1A3A52;
+      margin-bottom: 12px;
+    }
+
+    .upload-label {
+      display: inline-block;
+      padding: 14px 32px;
+      background: linear-gradient(135deg, #00D9C8 0%, #00B8A8 100%);
+      color: white;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-size: 15px;
+    }
+
+    .upload-label:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 217, 200, 0.3);
+    }
+
+    .upload-input { display: none; }
+    .upload-status { margin-top: 16px; font-size: 14px; color: #00D9C8; font-weight: 600; }
+
+    /* Interactive Map */
+    #map { 
+      height: 600px; 
+      width: 100%; 
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .leaflet-popup-content-wrapper {
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    }
+
+    .popup-header {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1A3A52;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #00D9C8;
+    }
+
+    .popup-stat {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      font-size: 13px;
+    }
+
+    .popup-stat .label { color: #6B7280; font-weight: 500; }
+    .popup-stat .value { color: #1A3A52; font-weight: 700; }
+    .popup-divider { height: 1px; background: #E8EDF2; margin: 8px 0; }
+    
+    /* Tables */
+    .data-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+    .data-table thead { background: linear-gradient(135deg, #1A3A52 0%, #2A5570 100%); }
+    .data-table th { padding: 14px 16px; text-align: left; font-size: 12px; font-weight: 600; color: #FFFFFF; text-transform: uppercase; letter-spacing: 0.5px; }
+    .data-table td { padding: 14px 16px; font-size: 14px; color: #1A3A52; border-bottom: 1px solid #E8EDF2; }
+    .data-table tr:hover { background: rgba(0, 217, 200, 0.05); }
+    
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    
+    @media (max-width: 1024px) {
+      .dashboard-container { flex-direction: column; }
+      .sidebar { width: 100%; border-right: none; border-bottom: 1px solid #E8EDF2; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Password Protection -->
+<script>
+  (function() {
+    const correctPassword = "xpeng2026";
+    let attempts = 0;
+    const maxAttempts = 3;
+    
+    function checkPassword() {
+      const enteredPassword = prompt("🔐 Enter password to access XPENG Dealer Dashboard:");
+      
+      if (enteredPassword === null) {
+        // User clicked cancel
+        document.body.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100vh; font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #F8FAFB;"><div style="text-align: center;"><h1 style="color: #1A3A52; margin-bottom: 16px;">Access Cancelled</h1><p style="color: #6B7280;">Refresh the page to try again.</p></div></div>';
+        throw new Error("Access cancelled");
+      }
+      
+      if (enteredPassword !== correctPassword) {
+        attempts++;
+        if (attempts >= maxAttempts) {
+          document.body.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100vh; font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #F8FAFB;"><div style="text-align: center;"><h1 style="color: #DC2626; margin-bottom: 16px;">🔒 Access Denied</h1><p style="color: #6B7280; margin-bottom: 8px;">Maximum login attempts exceeded.</p><p style="color: #9CA3AF; font-size: 14px;">Please contact Elevare Insights for access.</p></div></div>';
+          throw new Error("Access denied - max attempts");
+        } else {
+          alert(`❌ Incorrect password. ${maxAttempts - attempts} attempt(s) remaining.`);
+          checkPassword();
+        }
+      }
+    }
+    
+    checkPassword();
+  })();
+</script>
+
+<!-- Header -->
+<div class="dashboard-header">
+  <div class="logo-container">
+    <img src="https://intelligence.elevare-insights.com/xpeng/images/logo.png" alt="Elevare Insights" style="height: 50px; width: auto;">
+  </div>
+  <div class="client-badge">
+    <div class="client-badge-name">DEALER INTELLIGENCE</div>
+  </div>
+</div>
+
+<!-- Navigation -->
+<div class="nav-tabs">
+  <div class="nav-tab active" data-tab="territory">🗺️ Territory Intelligence</div>
+  <div class="nav-tab" data-tab="prospects">🎯 Prospect Alerts</div>
+  <div class="nav-tab" data-tab="performance">📊 Performance Insights</div>
+  <div class="nav-tab" data-tab="events">🤝 Events</div>
+  <div class="nav-tab" data-tab="reports">📋 Reports</div>
+</div>
+
+<!-- Main Container -->
+<div class="dashboard-container">
+  
+  <!-- Sidebar Filters -->
+  <div class="sidebar">
+    <div class="filter-section">
+      <div class="filter-title">🎯 Dealer Location</div>
+      
+      <div class="filter-group">
+        <label class="filter-label">Dealer Postcode</label>
+        <input type="text" class="filter-input" id="dealer-postcode" placeholder="e.g., EX16" value="EX16">
+        <div style="font-size: 11px; color: #6B7280; margin-top: 6px;">
+          Enter outward postcode (e.g., EX16 for Honiton)
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">Search Radius (miles)</label>
+        <input type="number" class="filter-input" id="search-radius" value="35" min="5" max="100" step="5">
+      </div>
+
+      <button class="filter-button" onclick="applyDealerFilter()">🔍 Search Area</button>
+    </div>
+
+    <div class="filter-section">
+      <div class="filter-title">📊 Member Filters</div>
+      
+      <div class="filter-group">
+        <label class="filter-label">Member Status</label>
+        <select class="filter-select" id="filter-status">
+          <option value="all">All Members</option>
+          <option value="owner">G6 Owners Only</option>
+          <option value="prospect">Prospects Only</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">Purchase Route</label>
+        <select class="filter-select" id="filter-route">
+          <option value="all">All Routes</option>
+          <option value="SS">Salary Sacrifice</option>
+          <option value="Outright">Outright Purchase</option>
+          <option value="Personal Lease">Personal Lease</option>
+          <option value="Business Lease">Business Lease</option>
+          <option value="other">Other Routes</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">Data Detail Level</label>
+        <div class="checkbox-group">
+          <input type="checkbox" id="show-detailed" checked>
+          <label for="show-detailed">Show Detailed Intelligence</label>
+        </div>
+        <div style="font-size: 11px; color: #6B7280; margin-top: 6px; font-style: italic;">
+          Shows specific models, routes & providers
+        </div>
+      </div>
+
+      <button class="filter-button" onclick="applyMemberFilters()">Apply Filters</button>
+    </div>
+
+    <!-- Results Summary -->
+    <div class="filter-results" id="results-summary" style="display: none;">
+      <h4>📍 Search Results</h4>
+      <div class="filter-stat">
+        <span class="label">Total Members:</span>
+        <span class="value" id="result-total">0</span>
+      </div>
+      <div class="filter-stat">
+        <span class="label">G6 Owners:</span>
+        <span class="value" id="result-owners">0</span>
+      </div>
+      <div class="filter-stat">
+        <span class="label">Prospects:</span>
+        <span class="value" id="result-prospects">0</span>
+      </div>
+      <div class="filter-stat">
+        <span class="label">Salary Sacrifice:</span>
+        <span class="value" id="result-ss">0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    
+    <!-- GEOGRAPHIC TAB -->
+    <!-- TERRITORY INTELLIGENCE TAB -->
+    <div class="tab-content active" id="tab-territory">
+      <div class="content-header">
+        <h1 class="content-title">Territory Intelligence</h1>
+        <p class="content-description">Real-time visibility of members within your territory radius. Search by dealer location to identify prospects, owners, and purchase route patterns.</p>
+      </div>
+
+      <!-- Upload Section -->
+      <div class="upload-section" id="upload-section">
+        <h3>📊 Load Member Data</h3>
+        <p>Upload your Excel file to begin territory analysis</p>
+        <label class="upload-label">
+          <input type="file" accept=".xlsx,.xls" class="upload-input" id="file-upload" onchange="handleFileUpload(event)">
+          Select Excel File
+        </label>
+        <div class="upload-status" id="upload-status"></div>
+      </div>
+
+      <!-- Map -->
+      <div class="chart-container" id="map-container" style="display: none;">
+        <div class="chart-header">
+          <h3 class="chart-title" id="map-title">Territory Member Distribution</h3>
+          <div style="font-size: 12px; color: #6B7280;">
+            <span id="map-filter-info">Showing all UK members</span>
+          </div>
+        </div>
+        <div id="map"></div>
+      </div>
+
+      <!-- Member Breakdown Table -->
+      <div class="chart-container" id="table-container" style="display: none;">
+        <div class="chart-header">
+          <h3 class="chart-title">Member Breakdown</h3>
+        </div>
+        <table class="data-table" id="member-table">
+          <thead>
+            <tr>
+              <th>Location</th>
+              <th>Postcode</th>
+              <th>Status</th>
+              <th>Model</th>
+              <th>Purchase Route</th>
+              <th>Provider</th>
+            </tr>
+          </thead>
+          <tbody id="table-body">
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PROSPECT ALERTS TAB -->
+    <div class="tab-content" id="tab-prospects">
+      <div class="content-header">
+        <h1 class="content-title">Prospect Alerts</h1>
+        <p class="content-description">Automated lead delivery with complete intelligence profiles. GDPR-compliant prospects who have explicitly requested dealer contact.</p>
+      </div>
+
+      <div class="chart-container">
+        <div class="chart-header">
+          <h3 class="chart-title">New Prospect Alerts</h3>
+          <div style="font-size: 13px; color: #6B7280; margin-top: 8px;">
+            <span style="background: #FEF3C7; color: #92400E; padding: 4px 12px; border-radius: 6px; font-weight: 600;">
+              0 new alerts
+            </span>
+          </div>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Name</th>
+              <th>Contact Number</th>
+              <th>Postcode</th>
+              <th>Model Interest</th>
+              <th>Behavioral Profile</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="background: #F9FAFB;">
+              <td colspan="7" style="text-align: center; padding: 60px 20px; color: #9CA3AF; font-size: 15px;">
+                <div style="font-size: 48px; margin-bottom: 16px;">📭</div>
+                <div style="font-weight: 600; color: #6B7280; margin-bottom: 8px;">No active prospect alerts</div>
+                <div style="font-size: 13px;">Warm leads will appear here when prospects in your territory request dealer contact</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PERFORMANCE INSIGHTS TAB -->
+    <div class="tab-content" id="tab-performance">
+      <div class="content-header">
+        <h1 class="content-title">Performance Insights</h1>
+        <p class="content-description">Territory performance metrics, delivery analytics, and customer satisfaction intelligence.</p>
+      </div>
+
+      <!-- Performance Metrics Table -->
+      <div class="chart-container" style="border-left: 4px solid #00D9C8;">
+        <div class="chart-header">
+          <h3 class="chart-title">📈 Territory Performance Metrics</h3>
+          <div style="font-size: 12px; color: #6B7280; margin-top: 4px;">
+            Current month performance and benchmarking indicators
+          </div>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width: 30%;">Metric</th>
+              <th style="width: 20%;">Current Value</th>
+              <th style="width: 20%;">Period</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>🚗 Deliveries This Month</strong></td>
+              <td style="font-size: 24px; font-weight: 700; color: #00D9C8;">0</td>
+              <td>January 2026</td>
+              <td><span style="background: #FEF3C7; color: #92400E; padding: 4px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;">⏳ Awaiting first delivery</span></td>
+            </tr>
+            <tr>
+              <td><strong>🎯 Active Pipeline</strong></td>
+              <td style="font-size: 24px; font-weight: 700; color: #D4793F;">—</td>
+              <td>Prospects in territory</td>
+              <td><span style="background: #DBEAFE; color: #1E40AF; padding: 4px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;">📊 Check Territory Intelligence</span></td>
+            </tr>
+            <tr>
+              <td><strong>⭐ NPS Score</strong></td>
+              <td style="font-size: 24px; font-weight: 700; color: #4A7C59;">—</td>
+              <td>Net Promoter Score</td>
+              <td><span style="background: #FEE2E2; color: #991B1B; padding: 4px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;">⭐ Post-delivery feedback</span></td>
+            </tr>
+            <tr>
+              <td><strong>🏆 Territory Ranking</strong></td>
+              <td style="font-size: 24px; font-weight: 700; color: #BFA181;">—</td>
+              <td>vs dealer network</td>
+              <td><span style="background: #E0E7FF; color: #3730A3; padding: 4px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;">🏆 Benchmarking data pending</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Purchase Route Breakdown -->
+      <div class="chart-container" style="border-left: 4px solid #D4793F;">
+        <div class="chart-header">
+          <h3 class="chart-title">💳 Purchase Route Breakdown</h3>
+          <div style="font-size: 12px; color: #6B7280; margin-top: 4px;">
+            Channel performance and transaction value analysis
+          </div>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width: 30%;">Purchase Route</th>
+              <th style="width: 15%;">Deliveries</th>
+              <th style="width: 15%;">% of Total</th>
+              <th style="width: 20%;">Avg. Transaction Value</th>
+              <th>Trend</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="background: #FFFBEB; border-left: 3px solid #F59E0B;">
+              <td><strong>💼 Salary Sacrifice</strong></td>
+              <td>—</td>
+              <td>—</td>
+              <td>—</td>
+              <td style="color: #9CA3AF; font-size: 12px;">Awaiting data</td>
+            </tr>
+            <tr style="background: #F0FDF4; border-left: 3px solid #10B981;">
+              <td><strong>💰 Outright Purchase</strong></td>
+              <td>—</td>
+              <td>—</td>
+              <td>—</td>
+              <td style="color: #9CA3AF; font-size: 12px;">Awaiting data</td>
+            </tr>
+            <tr style="background: #EFF6FF; border-left: 3px solid #3B82F6;">
+              <td><strong>📋 Personal Lease</strong></td>
+              <td>—</td>
+              <td>—</td>
+              <td>—</td>
+              <td style="color: #9CA3AF; font-size: 12px;">Awaiting data</td>
+            </tr>
+            <tr style="background: #F5F3FF; border-left: 3px solid #8B5CF6;">
+              <td><strong>🏢 Business Lease</strong></td>
+              <td>—</td>
+              <td>—</td>
+              <td>—</td>
+              <td style="color: #9CA3AF; font-size: 12px;">Awaiting data</td>
+            </tr>
+            <tr style="background: #F9FAFB; border-left: 3px solid #6B7280;">
+              <td colspan="5" style="text-align: center; padding: 30px 20px;">
+                <div style="font-size: 32px; margin-bottom: 8px;">📈</div>
+                <div style="color: #6B7280; font-weight: 600; font-size: 14px; margin-bottom: 4px;">Route breakdown will populate after first delivery</div>
+                <div style="font-size: 12px; color: #9CA3AF;">Channel performance data updates automatically</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Model Breakdown -->
+      <div class="chart-container" style="border-left: 4px solid #4A7C59;">
+        <div class="chart-header">
+          <h3 class="chart-title">🚗 Model Delivery Breakdown</h3>
+          <div style="font-size: 12px; color: #6B7280; margin-top: 4px;">
+            Model mix and preferred purchase routes
+          </div>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width: 25%;">Model</th>
+              <th style="width: 15%;">Deliveries</th>
+              <th style="width: 15%;">% of Total</th>
+              <th style="width: 25%;">Top Purchase Route</th>
+              <th>Performance</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="background: #F0FDF4; border-left: 3px solid #10B981;">
+              <td><strong>🏎️ G6 (MY26)</strong></td>
+              <td>—</td>
+              <td>—</td>
+              <td>—</td>
+              <td style="color: #9CA3AF; font-size: 12px;">Awaiting data</td>
+            </tr>
+            <tr style="background: #F9FAFB; border-left: 3px solid #6B7280;">
+              <td colspan="5" style="text-align: center; padding: 30px 20px;">
+                <div style="font-size: 32px; margin-bottom: 8px;">🏎️</div>
+                <div style="color: #6B7280; font-weight: 600; font-size: 14px; margin-bottom: 4px;">Model breakdown will populate after first delivery</div>
+                <div style="font-size: 12px; color: #9CA3AF;">Track which models perform best in your territory</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Customer Experience Intelligence -->
+      <div class="chart-container" style="border-left: 4px solid #4A7C59;">
+        <div class="chart-header">
+          <h3 class="chart-title">⭐ Delivery Experience Intelligence</h3>
+          <div style="font-size: 12px; color: #6B7280; margin-top: 4px;">
+            Systematic feedback from owner handover process
+          </div>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width: 30%;">Experience Dimension</th>
+              <th style="width: 20%;">Satisfaction Score</th>
+              <th style="width: 15%;">Feedback Count</th>
+              <th>Key Insights</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>🚚 Delivery Process</strong></td>
+              <td>—</td>
+              <td>0</td>
+              <td style="color: #9CA3AF; font-style: italic;">No feedback collected yet</td>
+            </tr>
+            <tr>
+              <td><strong>📚 Product Knowledge</strong></td>
+              <td>—</td>
+              <td>0</td>
+              <td style="color: #9CA3AF; font-style: italic;">No feedback collected yet</td>
+            </tr>
+            <tr>
+              <td><strong>🎓 Feature Walkthrough</strong></td>
+              <td>—</td>
+              <td>0</td>
+              <td style="color: #9CA3AF; font-style: italic;">No feedback collected yet</td>
+            </tr>
+            <tr>
+              <td><strong>💫 Overall Experience</strong></td>
+              <td>—</td>
+              <td>0</td>
+              <td style="color: #9CA3AF; font-style: italic;">No feedback collected yet</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- EVENTS TAB -->
+    <div class="tab-content" id="tab-events">
+      <div class="content-header">
+        <h1 class="content-title">Event Management</h1>
+        <p class="content-description">Owner engagement and prospect conversion events coordinated through community intelligence.</p>
+      </div>
+
+      <div class="chart-container">
+        <div class="chart-header">
+          <h3 class="chart-title">Upcoming Events</h3>
+        </div>
+        <div style="padding: 60px 20px; text-align: center; color: #9CA3AF;">
+          <div style="font-size: 48px; margin-bottom: 16px;">📅</div>
+          <div style="font-weight: 600; color: #6B7280; margin-bottom: 8px;">No scheduled events</div>
+          <div style="font-size: 13px; margin-bottom: 24px;">Contact Elevare Insights to schedule your first event</div>
+          <button class="filter-button" style="display: inline-block; width: auto; padding: 12px 32px;">
+            Request Event Planning
+          </button>
+        </div>
+      </div>
+
+      <!-- Event Types -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; margin-top: 32px;">
+        
+        <div class="chart-container" style="border-left: 4px solid #00D9C8;">
+          <h4 style="font-size: 18px; font-weight: 700; color: #1A3A52; margin-bottom: 12px;">
+            👥 Owner Engagement Events
+          </h4>
+          <p style="font-size: 14px; color: #6B7280; line-height: 1.7; margin-bottom: 16px;">
+            Networking events at your dealership for performance intelligence and training gap identification.
+          </p>
+          <div style="font-size: 13px; color: #6B7280; line-height: 1.8;">
+            <div style="margin-bottom: 8px;"><strong>Benefits:</strong></div>
+            <div>• Training gap identification</div>
+            <div>• Delivery quality assessment</div>
+            <div>• Process improvement insights</div>
+            <div>• Structured intelligence capture</div>
+          </div>
+          <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #E8EDF2; font-size: 12px; font-weight: 600; color: #00D9C8;">
+            ROI: 5-10% conversion improvement = £210K-420K additional annual revenue
+          </div>
+        </div>
+
+        <div class="chart-container" style="border-left: 4px solid #D4793F;">
+          <h4 style="font-size: 18px; font-weight: 700; color: #1A3A52; margin-bottom: 12px;">
+            🎯 Prospect Conversion Events
+          </h4>
+          <p style="font-size: 14px; color: #6B7280; line-height: 1.7; margin-bottom: 16px;">
+            Live sales events with owner advocacy for higher conversion rates and objection handling.
+          </p>
+          <div style="font-size: 13px; color: #6B7280; line-height: 1.8;">
+            <div style="margin-bottom: 8px;"><strong>Benefits:</strong></div>
+            <div>• Live owner testimonials</div>
+            <div>• Real-time objection handling</div>
+            <div>• Pre-validated audience</div>
+            <div>• Documented success approaches</div>
+          </div>
+          <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #E8EDF2; font-size: 12px; font-weight: 600; color: #D4793F;">
+            ROI: Single sale = event cost recovered 10× over
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- REPORTS TAB -->
+    <div class="tab-content" id="tab-reports">
+      <div class="content-header">
+        <h1 class="content-title">Intelligence Reports</h1>
+        <p class="content-description">Event documentation and performance analytics from owner engagement and prospect conversion events.</p>
+      </div>
+
+      <div class="chart-container">
+        <div class="chart-header">
+          <h3 class="chart-title">Event Intelligence Reports</h3>
+          <div style="font-size: 12px; color: #6B7280; margin-top: 4px;">
+            Systematic capture of what works and what doesn't from audio-recorded events
+          </div>
+        </div>
+        <div style="padding: 60px 20px; text-align: center; color: #9CA3AF;">
+          <div style="font-size: 48px; margin-bottom: 16px;">🎙️</div>
+          <div style="font-weight: 600; color: #6B7280; margin-bottom: 8px;">Your event reports will appear here</div>
+          <div style="font-size: 13px; line-height: 1.7; max-width: 600px; margin: 0 auto;">
+            Owner engagement and prospect conversion events are audio-recorded to systematically capture insights, successful approaches, and training opportunities.
+          </div>
+        </div>
+      </div>
+
+      <div class="insights-grid">
+        <div class="insight-card">
+          <div class="insight-header">
+            <span class="insight-icon">👥</span>
+            <div class="insight-title">Owner Engagement Reports</div>
+          </div>
+          <div class="insight-text">
+            Documented insights from owner networking events including training gaps, delivery quality feedback, and process improvement recommendations.
+          </div>
+        </div>
+        <div class="insight-card">
+          <div class="insight-header">
+            <span class="insight-icon">🎯</span>
+            <div class="insight-title">Prospect Conversion Reports</div>
+          </div>
+          <div class="insight-text">
+            Analysis of successful approaches from live sales events with owner advocacy, objection handling patterns, and conversion techniques.
+          </div>
+        </div>
+        <div class="insight-card">
+          <div class="insight-header">
+            <span class="insight-icon">📊</span>
+            <div class="insight-title">Performance Analytics</div>
+          </div>
+          <div class="insight-text">
+            Quarterly territory performance reviews showing trends, benchmarking data, and actionable intelligence for continuous improvement.
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // Global variables
+  let map = null;
+  let memberData = [];
+  let filteredData = [];
+  let dealerMarker = null;
+  let searchCircle = null;
+
+  // COMPLETE UK postcode area coordinates - all 132 areas
+  const postcodeCoords = {
+    // London - Complete
+    'EC': [51.5155, -0.0922], 'WC': [51.5145, -0.1241], 'E': [51.5388, -0.0318],
+    'N': [51.5690, -0.1389], 'NW': [51.5450, -0.1679], 'SE': [51.4649, -0.0311],
+    'SW': [51.4926, -0.1435], 'W': [51.5128, -0.1896],
+    // Scotland - Complete
+    'AB': [57.1497, -2.0943], 'DD': [56.4620, -2.9707], 'DG': [55.0703, -3.6054],
+    'EH': [55.9533, -3.1883], 'FK': [56.1165, -3.9369], 'G': [55.8642, -4.2518],
+    'HS': [57.8547, -6.3694], 'IV': [57.4778, -4.2247], 'KA': [55.6118, -4.6299],
+    'KW': [58.4438, -3.0927], 'KY': [56.2082, -3.1550], 'ML': [55.7731, -3.7782],
+    'PA': [55.9450, -4.6237], 'PH': [56.3959, -3.4366], 'TD': [55.5731, -2.5822],
+    'ZE': [60.1549, -1.1450],
+    // Wales - Complete
+    'CF': [51.4816, -3.1791], 'LL': [53.2173, -4.1269], 'LD': [52.2417, -3.3442],
+    'NP': [51.5842, -2.9977], 'SA': [51.6214, -3.9436], 'SY': [52.4104, -3.9514],
+    // Northern Ireland
+    'BT': [54.5973, -5.9301],
+    // North East England
+    'DH': [54.8572, -1.5708], 'DL': [54.5233, -1.5511], 'HG': [53.9921, -1.5418],
+    'HX': [53.7250, -1.8583], 'NE': [54.9783, -1.6178], 'SR': [54.9069, -1.3838],
+    'TS': [54.5742, -1.2351], 'YO': [53.9600, -1.0873],
+    // North West England
+    'BB': [53.7930, -2.4650], 'BD': [53.7960, -1.7594], 'BL': [53.5768, -2.4282],
+    'CA': [54.8951, -2.9382], 'CH': [53.1908, -2.8908], 'CW': [53.0634, -2.5199],
+    'FY': [53.8175, -3.0357], 'HD': [53.6450, -1.7798], 'HU': [53.7444, -0.3325],
+    'L': [53.4084, -2.9916], 'LA': [54.0466, -2.8007], 'M': [53.4808, -2.2426],
+    'OL': [53.5444, -2.1169], 'PR': [53.7632, -2.7031], 'SK': [53.4083, -2.1478],
+    'WA': [53.3900, -2.5970], 'WN': [53.5450, -2.6318],
+    // Yorkshire
+    'DN': [53.5228, -1.1285], 'LS': [53.8008, -1.5491], 'S': [53.3811, -1.4701],
+    'WF': [53.6833, -1.4992],
+    // East Midlands
+    'DE': [52.9219, -1.4746], 'LE': [52.6369, -1.1398], 'LN': [53.2307, -0.5406],
+    'NG': [52.9548, -1.1581], 'NN': [52.2405, -0.9027],
+    // West Midlands
+    'B': [52.4862, -1.8904], 'CV': [52.4068, -1.5197], 'DY': [52.4582, -2.0930],
+    'HR': [52.0565, -2.7160], 'ST': [52.9989, -2.1833], 'TF': [52.6768, -2.4469],
+    'WR': [52.1916, -2.2214], 'WS': [52.5856, -2.0051], 'WV': [52.5864, -2.1285],
+    // East of England
+    'CB': [52.2053, 0.1218], 'CM': [51.7356, 0.4685], 'CO': [51.8910, 0.9036],
+    'IP': [52.0594, 1.1556], 'LU': [51.8787, -0.4200], 'NR': [52.6309, 1.2974],
+    'PE': [52.5695, -0.2405], 'SG': [51.9027, -0.1804],
+    // South East England
+    'AL': [51.7500, -0.3360], 'BN': [50.8279, -0.1361], 'BR': [51.4055, 0.0164],
+    'CT': [51.2787, 1.0789], 'CR': [51.3762, -0.0982], 'DA': [51.4415, 0.2199],
+    'EN': [51.6523, -0.0800], 'GU': [51.2362, -0.5704], 'HA': [51.5898, -0.3346],
+    'HP': [51.7520, -0.4765], 'IG': [51.5588, 0.0819], 'KT': [51.3966, -0.3045],
+    'ME': [51.3889, 0.5209], 'MK': [52.0406, -0.7594], 'OX': [51.7520, -1.2577],
+    'PO': [50.8198, -1.0880], 'RG': [51.4543, -0.9781], 'RH': [51.1081, -0.1829],
+    'RM': [51.5779, 0.1821], 'SL': [51.5085, -0.5955], 'SM': [51.3727, -0.2039],
+    'SO': [50.9097, -1.4044], 'SS': [51.5461, 0.7076], 'TN': [51.1325, 0.2634],
+    'TW': [51.4410, -0.3367], 'UB': [51.5074, -0.3531], 'WD': [51.6569, -0.3963],
+    // South West England
+    'BA': [51.3758, -2.3599], 'BH': [50.7192, -1.8808], 'BS': [51.4545, -2.5879],
+    'DT': [50.7156, -2.4419], 'EX': [50.7184, -3.5339], 'GL': [51.8642, -2.2382],
+    'PL': [50.3755, -4.1427], 'SN': [51.5558, -1.7797], 'SP': [51.0690, -1.7944],
+    'TA': [51.0188, -3.1005], 'TQ': [50.4619, -3.5253], 'TR': [50.2632, -5.0510],
+    // TQ Specific Districts (Torbay/South Devon)
+    'TQ1': [50.4619, -3.5253], 'TQ2': [50.4756, -3.5397], 'TQ3': [50.4380, -3.5550],
+    'TQ4': [50.4350, -3.5750], 'TQ5': [50.3960, -3.5770], 'TQ6': [50.3570, -3.6790],
+    'TQ7': [50.2950, -3.7650], 'TQ8': [50.2870, -3.7540], 'TQ9': [50.4770, -3.7290],
+    'TQ10': [50.4850, -3.7980], 'TQ11': [50.5130, -3.8590], 'TQ12': [50.4750, -3.6050],
+    'TQ13': [50.5540, -3.7520], 'TQ14': [50.5460, -3.5140],
+    // Channel Islands & Isle of Man
+    'GY': [49.4657, -2.5853], 'IM': [54.2361, -4.5481], 'JE': [49.2144, -2.1312],
+    // Special/International postcodes in data
+    'A': [53.3498, -6.2603], 'D': [53.3498, -6.2603], 'F': [53.2707, -9.0568],
+    'P': [52.6638, -8.6267], 'R': [53.5706, -8.1237], 'U': [54.5973, -5.9301],
+    'VU': [52.9548, -1.1581], 'Z': [52.6309, 1.2974]
+  };
+
+  // UK City/Town name to coordinates (for members with location but no postcode)
+  const cityCoords = {
+    'London': [51.5074, -0.1278], 'Birmingham': [52.4862, -1.8904], 
+    'Manchester': [53.4808, -2.2426], 'Leeds': [53.8008, -1.5491],
+    'Glasgow': [55.8642, -4.2518], 'Edinburgh': [55.9533, -3.1883],
+    'Liverpool': [53.4084, -2.9916], 'Bristol': [51.4545, -2.5879],
+    'Sheffield': [53.3811, -1.4701], 'Leicester': [52.6369, -1.1398],
+    'Cardiff': [51.4816, -3.1791], 'Swindon': [51.5558, -1.7797],
+    'Nottingham': [52.9548, -1.1581], 'Newcastle': [54.9783, -1.6178],
+    'Belfast': [54.5973, -5.9301], 'Southampton': [50.9097, -1.4044],
+    'Portsmouth': [50.8198, -1.0880], 'Brighton': [50.8279, -0.1361],
+    'Oxford': [51.7520, -1.2577], 'Cambridge': [52.2053, 0.1218],
+    'Bath': [51.3758, -2.3599], 'Exeter': [50.7184, -3.5339],
+    'Bournemouth': [50.7192, -1.8808], 'Reading': [51.4543, -0.9781],
+    'York': [53.9600, -1.0873], 'Norwich': [52.6309, 1.2974],
+    'Chelmsford': [51.7356, 0.4685], 'Ipswich': [52.0594, 1.1556],
+    'Gloucester': [51.8642, -2.2382], 'Coventry': [52.4068, -1.5197],
+    'Swansea': [51.6214, -3.9436], 'Derby': [52.9219, -1.4746],
+    'Plymouth': [50.3755, -4.1427], 'Aberdeen': [57.1497, -2.0943],
+    'Dundee': [56.4620, -2.9707], 'Peterborough': [52.5695, -0.2405],
+    'Milton Keynes': [52.0406, -0.7594], 'Luton': [51.8787, -0.4200],
+    'Northampton': [52.2405, -0.9027], 'Warrington': [53.3900, -2.5970],
+    'Telford': [52.6768, -2.4469], 'Basildon': [51.5760, 0.4887],
+    'Southend': [51.5461, 0.7076], 'Worthing': [50.8148, -0.3714],
+    'Carmarthen': [51.8571, -4.3106], 'Chippenham': [51.4619, -2.1157],
+    'Doncaster': [53.5228, -1.1285], 'East Kilbride': [55.7645, -4.1770],
+    'Harrogate': [53.9921, -1.5418], 'Lincoln': [53.2307, -0.5406],
+    'Salisbury': [51.0690, -1.7944], 'Chester': [53.1908, -2.8908],
+    'Honiton': [50.7981, -3.1918], 'Torquay': [50.4619, -3.5253],
+    'Truro': [50.2632, -5.0510], 'Preston': [53.7632, -2.7031],
+    'Guildford': [51.2362, -0.5704], 'Inverness': [57.4778, -4.2247],
+    'Stirling': [56.1165, -3.9369], 'Perth': [56.3959, -3.4366],
+    'Dumfries': [55.0703, -3.6054], 'Hull': [53.7444, -0.3325],
+    'Stoke-on-Trent': [52.9989, -2.1833], 'Wolverhampton': [52.5864, -2.1285],
+    'Bradford': [53.7960, -1.7594], 'Middlesbrough': [54.5742, -1.2351],
+    'Sunderland': [54.9069, -1.3838], 'Bolton': [53.5768, -2.4282],
+    'Blackburn': [53.7930, -2.4650], 'Blackpool': [53.8175, -3.0357],
+    'Huddersfield': [53.6450, -1.7798], 'Halifax': [53.7250, -1.8583],
+    'Oldham': [53.5444, -2.1169], 'Wigan': [53.5450, -2.6318],
+    'Stockport': [53.4083, -2.1478], 'Rochdale': [53.6097, -2.1561],
+    'Birkenhead': [53.3932, -3.0145], 'Abergavenny': [51.8239, -3.0173],
+    'Berwick-Upon-Tweed': [55.7697, -2.0063], 'Byfleet': [51.3373, -0.4791],
+    'Canvey': [51.5211, 0.5774], 'Chalford': [51.7089, -2.1467],
+    'Clacton-on-Sea': [51.7891, 1.1505], 'Clevedon': [51.4384, -2.8570],
+    'Cornwall': [50.2660, -5.0527], 'Abbingdon': [51.6708, -1.2798]
+  };
+
+  // Tab switching
+  document.querySelectorAll('.nav-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      tab.classList.add('active');
+      const tabId = 'tab-' + tab.getAttribute('data-tab');
+      document.getElementById(tabId).classList.add('active');
+    });
+  });
+
+  // File upload handler
+  function handleFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    document.getElementById('upload-status').textContent = '⏳ Processing...';
+    document.getElementById('upload-status').style.color = '#00D9C8';
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+        console.log(`Raw data loaded: ${jsonData.length} rows`);
+        
+        processData(jsonData);
+        
+        document.getElementById('upload-status').textContent = '✓ Data loaded successfully!';
+        document.getElementById('upload-status').style.color = '#4A7C59';
+        
+        // Hide upload section after successful load
+        setTimeout(() => {
+          document.getElementById('upload-section').style.display = 'none';
+        }, 1500);
+
+      } catch (error) {
+        console.error('Error processing file:', error);
+        document.getElementById('upload-status').textContent = `❌ Error: ${error.message}`;
+        document.getElementById('upload-status').style.color = '#EF4444';
+      }
+    };
+
+    reader.onerror = function(error) {
+      console.error('FileReader error:', error);
+      document.getElementById('upload-status').textContent = '❌ Error reading file';
+      document.getElementById('upload-status').style.color = '#EF4444';
+    };
+
+    reader.readAsArrayBuffer(file);
+  }
+
+  // Process Excel data
+  function processData(rawData) {
+    try {
+      console.log(`Processing ${rawData.length} rows from Excel...`);
+      
+      // Filter for UK members with postcodes OR locations (regardless of status)
+      memberData = rawData.filter(row => {
+        const location = row.FB_Location;
+        const postcode = row.Outward_Postcode;
+        const ownership = row['Overall Ownership - likelihood'] || '';
+        const international = ['Hong Kong', 'Cairo', 'Norway', 'Dublin', 'Australia'];
+        
+        // Exclude dealers/partners
+        const isDealer = ownership.toLowerCase().includes('dealer') || 
+                        ownership.toLowerCase().includes('partner');
+        
+        // Must have either postcode or location (but not international or dealer)
+        // STATUS REMOVED - includes Active, Left, and any other status
+        return (postcode || location) &&
+               (!location || !international.includes(location)) &&
+               !isDealer;
+      }).map(row => {
+        try {
+          const isOwner = (row['Overall Ownership - likelihood'] || '').toLowerCase().includes('g6') && 
+                         (row['Overall Ownership - likelihood'] || '').toLowerCase().includes('my25');
+          const isProspect = (row['Overall Ownership - likelihood'] || '').toLowerCase().includes('prospect');
+          
+          // MODEL: For prospects use Tally_future_model_interest, for owners use actual ownership
+          const model = isProspect 
+            ? (row['Tally_future_model_interest'] || row['Overall Ownership - likelihood'] || '')
+            : (row['Overall Ownership - likelihood'] || '');
+            
+          // PURCHASE ROUTE: Check Purchase Route OR Tally_finance_route for all
+          // For prospects, also check Tally_purchase_future_finance
+          const route = isProspect
+            ? (row['Tally_purchase_future_finance'] || row['Purchase Route'] || row['Tally_finance_route'] || '')
+            : (row['Purchase Route'] || row['Tally_finance_route'] || '');
+          
+          return {
+            name: row.Name || '',
+            location: row.FB_Location || '',
+            postcode: row.Outward_Postcode || '',
+            ownership: row['Overall Ownership - likelihood'] || '',
+            model: model,
+            route: route,
+            provider: row['Provider'] || '',
+            status: row.Status || '',
+            isOwner: isOwner,
+            isProspect: isProspect
+          };
+        } catch (error) {
+          console.error('Error mapping row:', row, error);
+          return null;
+        }
+      }).filter(m => m !== null);
+
+      console.log(`✓ Processed ${memberData.length} UK members (all statuses, dealers/partners excluded)`);
+      
+      // Initially show all members
+      filteredData = [...memberData];
+      
+      // Show containers first
+      document.getElementById('map-container').style.display = 'block';
+      document.getElementById('table-container').style.display = 'block';
+      
+      // Initialize map
+      initMap();
+      
+      // Wait for map to be fully ready, then add markers
+      setTimeout(() => {
+        if (map) {
+          console.log('Adding markers to map...');
+          updateMapMarkers();
+        } else {
+          console.error('Map not initialized after timeout');
+        }
+      }, 200);
+      
+      // Update total records counter
+      const totalRecordsEl = document.getElementById('total-records');
+      if (totalRecordsEl) {
+        totalRecordsEl.textContent = memberData.length;
+      }
+      
+      console.log('✓ Dashboard initialized successfully');
+      
+    } catch (error) {
+      console.error('Error in processData:', error);
+      throw error; // Re-throw to be caught by handleFileUpload
+    }
+  }
+
+  // Initialize map
+  function initMap() {
+    if (map) {
+      console.log('Map already exists, skipping initialization');
+      return;
+    }
+
+    console.log('Initializing map...');
+    
+    try {
+      map = L.map('map').setView([52.5, -1.5], 6);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap',
+        maxZoom: 18
+      }).addTo(map);
+      
+      console.log('✓ Map initialized successfully');
+      
+      // Wait for map to be ready before adding markers
+      setTimeout(() => {
+        console.log('Map ready, adding markers...');
+      }, 100);
+      
+    } catch (error) {
+      console.error('Error initializing map:', error);
+    }
+  }
+
+  // Update map markers
+  function updateMapMarkers() {
+    if (!map) {
+      console.error('Cannot update markers - map not initialized');
+      return;
+    }
+
+    console.log(`Updating map markers for ${filteredData.length} members...`);
+
+    // Clear existing markers
+    map.eachLayer(layer => {
+      if (layer instanceof L.Circle || (layer instanceof L.Marker && layer !== dealerMarker)) {
+        map.removeLayer(layer);
+      }
+    });
+
+    // Aggregate by postcode or location
+    const locationMap = {};
+    let mappedCount = 0;
+    let unmappedCount = 0;
+    
+    filteredData.forEach(member => {
+      // Use postcode if available, otherwise location
+      const key = member.postcode || member.location || 'Unknown';
+      
+      if (!locationMap[key]) {
+        locationMap[key] = {
+          members: [],
+          owners: 0,
+          prospects: 0,
+          routes: {}
+        };
+      }
+      locationMap[key].members.push(member);
+      if (member.isOwner) locationMap[key].owners++;
+      if (member.isProspect) locationMap[key].prospects++;
+      if (member.route) {
+        locationMap[key].routes[member.route] = (locationMap[key].routes[member.route] || 0) + 1;
+      }
+    });
+
+    console.log(`Grouped into ${Object.keys(locationMap).length} unique locations`);
+
+    // Add markers
+    Object.entries(locationMap).forEach(([key, data]) => {
+      // Get coordinates - pass both postcode and location from first member
+      const firstMember = data.members[0];
+      const coords = getPostcodeCoords(firstMember.postcode, firstMember.location);
+      
+      if (!coords) {
+        unmappedCount += data.members.length;
+        return;
+      }
+      
+      mappedCount += data.members.length;
+
+      const radius = Math.max(data.members.length * 2000, 3000);
+
+      const circle = L.circle(coords, {
+        color: '#00D9C8',
+        fillColor: '#00D9C8',
+        fillOpacity: 0.4,
+        radius: radius,
+        weight: 2
+      }).addTo(map);
+
+      let popupContent = `
+        <div class="popup-header">${key}</div>
+        <div class="popup-stat">
+          <span class="label">Total Members:</span>
+          <span class="value">${data.members.length}</span>
+        </div>
+        <div class="popup-divider"></div>
+        <div class="popup-stat">
+          <span class="label">G6 Owners:</span>
+          <span class="value">${data.owners}</span>
+        </div>
+        <div class="popup-stat">
+          <span class="label">Prospects:</span>
+          <span class="value">${data.prospects}</span>
+        </div>
+      `;
+
+      if (Object.keys(data.routes).length > 0) {
+        popupContent += '<div class="popup-divider"></div>';
+        Object.entries(data.routes).forEach(([route, count]) => {
+          const routeName = route === 'SS' ? 'Salary Sacrifice' : route;
+          popupContent += `
+            <div class="popup-stat">
+              <span class="label">${routeName}:</span>
+              <span class="value">${count}</span>
+            </div>
+          `;
+        });
+      }
+
+      circle.bindPopup(popupContent);
+
+      // Add label
+      L.marker(coords, {
+        icon: L.divIcon({
+          className: 'city-label',
+          html: `<div style="
+            background: rgba(26, 58, 82, 0.9);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            white-space: nowrap;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+          ">${key} (${data.members.length})</div>`,
+          iconSize: [80, 20],
+          iconAnchor: [40, -10]
+        })
+      }).addTo(map);
+    });
+
+    console.log(`✓ Added markers for ${mappedCount} members (${unmappedCount} without coordinates)`);
+
+    updateTable();
+  }
+
+  // Get coordinates - handles postcodes, postcode areas, and city names
+  function getPostcodeCoords(postcode, location) {
+    try {
+      if (!postcode && !location) {
+        console.log('No postcode or location provided');
+        return null;
+      }
+      
+      // Try postcode first (exact match)
+      if (postcode && postcodeCoords[postcode]) {
+        console.log(`Found exact postcode match: ${postcode} =>`, postcodeCoords[postcode]);
+        return postcodeCoords[postcode];
+      }
+      
+      // Try postcode area (letters only)
+      if (postcode) {
+        const area = postcode.match(/^[A-Z]+/)?.[0];
+        if (area && postcodeCoords[area]) {
+          console.log(`Found postcode area match: ${postcode} => ${area} =>`, postcodeCoords[area]);
+          return postcodeCoords[area];
+        }
+      }
+      
+      // Try location name (city/town)
+      if (location) {
+        // Direct match
+        if (cityCoords[location]) {
+          console.log(`Found city match: ${location} =>`, cityCoords[location]);
+          return cityCoords[location];
+        }
+        
+        // Case-insensitive match
+        const locationLower = location.toLowerCase();
+        for (const [city, coords] of Object.entries(cityCoords)) {
+          if (city.toLowerCase() === locationLower) {
+            console.log(`Found case-insensitive city match: ${location} => ${city} =>`, coords);
+            return coords;
+          }
+        }
+        
+        // Try partial match (e.g., "Birmingham " matches "Birmingham")
+        const locationTrimmed = location.trim();
+        if (cityCoords[locationTrimmed]) {
+          console.log(`Found trimmed city match: ${location} => ${locationTrimmed} =>`, cityCoords[locationTrimmed]);
+          return cityCoords[locationTrimmed];
+        }
+      }
+      
+      console.log(`No coordinates found for postcode: ${postcode}, location: ${location}`);
+      return null;
+    } catch (error) {
+      console.error(`Error getting coordinates for postcode: ${postcode}, location: ${location}`, error);
+      return null;
+    }
+  }
+
+  // Apply dealer filter
+  function applyDealerFilter() {
+    const dealerPostcode = document.getElementById('dealer-postcode').value.toUpperCase();
+    const radius = parseFloat(document.getElementById('search-radius').value);
+
+    const dealerCoords = getPostcodeCoords(dealerPostcode, dealerPostcode);
+    if (!dealerCoords) {
+      alert('Location not found. Try postcode like EX16, SN1, or city name like Honiton, Swindon');
+      return;
+    }
+
+    console.log(`Searching ${radius} miles from ${dealerPostcode} at coords:`, dealerCoords);
+    console.log(`Total members in dataset: ${memberData.length}`);
+
+    // Remove existing dealer marker and circle
+    if (dealerMarker) {
+      map.removeLayer(dealerMarker);
+      dealerMarker = null;
+    }
+    if (searchCircle) {
+      map.removeLayer(searchCircle);
+      searchCircle = null;
+    }
+
+    // Add dealer marker
+    dealerMarker = L.marker(dealerCoords, {
+      icon: L.divIcon({
+        className: 'dealer-marker',
+        html: `<div style="
+          background: #D4793F;
+          color: white;
+          padding: 8px 12px;
+          border-radius: 8px;
+          font-size: 13px;
+          font-weight: 700;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+          border: 3px solid white;
+        ">🏢 Dealer: ${dealerPostcode}</div>`,
+        iconSize: [120, 30],
+        iconAnchor: [60, 15]
+      })
+    }).addTo(map);
+
+    // Add search radius circle
+    const radiusMeters = radius * 1609.34; // miles to meters
+    searchCircle = L.circle(dealerCoords, {
+      color: '#D4793F',
+      fillColor: '#D4793F',
+      fillOpacity: 0.1,
+      radius: radiusMeters,
+      weight: 2,
+      dashArray: '5, 10'
+    }).addTo(map);
+
+    console.log('Search circle added to map');
+
+    // Filter members within radius
+    let membersInRadius = 0;
+    let membersWithCoords = 0;
+    let membersWithoutCoords = 0;
+
+    filteredData = memberData.filter(member => {
+      const memberCoords = getPostcodeCoords(member.postcode, member.location);
+      
+      if (!memberCoords) {
+        membersWithoutCoords++;
+        return false;
+      }
+      
+      membersWithCoords++;
+      const distance = calculateDistance(dealerCoords, memberCoords);
+      
+      if (distance <= radius) {
+        membersInRadius++;
+        console.log(`Member within radius: ${member.location || member.postcode} at ${distance.toFixed(1)} miles`);
+        return true;
+      }
+      
+      return false;
+    });
+
+    console.log(`Members with coordinates: ${membersWithCoords}`);
+    console.log(`Members without coordinates: ${membersWithoutCoords}`);
+    console.log(`Members within ${radius} miles: ${membersInRadius}`);
+    console.log(`Filtered data length: ${filteredData.length}`);
+
+    // Update results
+    updateResultsSummary();
+    updateMapMarkers();
+    
+    document.getElementById('map-title').textContent = 
+      `${radius} miles from ${dealerPostcode} - ${filteredData.length} members`;
+    document.getElementById('map-filter-info').textContent = 
+      `Dealer radius: ${radius} miles from ${dealerPostcode}`;
+    
+    // AUTO-ZOOM: Wait for circle to be fully rendered, then zoom
+    setTimeout(() => {
+      try {
+        console.log('Attempting to zoom to bounds...');
+        
+        if (!searchCircle) {
+          console.error('Search circle is null');
+          return;
+        }
+        
+        const bounds = searchCircle.getBounds();
+        console.log('Got bounds:', bounds);
+        
+        map.fitBounds(bounds, {
+          padding: [50, 50],
+          maxZoom: 11
+        });
+        
+        console.log('✓ Zoom completed. Current zoom level:', map.getZoom());
+        console.log('✓ Current center:', map.getCenter());
+      } catch (error) {
+        console.error('Error zooming:', error);
+        
+        // Fallback: manually calculate bounds from center and radius
+        console.log('Trying fallback zoom method...');
+        try {
+          const latLng = L.latLng(dealerCoords);
+          const radiusKm = radius * 1.60934;
+          
+          // Calculate approximate bounds (rough calculation)
+          const latDelta = radiusKm / 111; // roughly 111km per degree latitude
+          const lngDelta = radiusKm / (111 * Math.cos(latLng.lat * Math.PI / 180));
+          
+          const fallbackBounds = L.latLngBounds(
+            [latLng.lat - latDelta, latLng.lng - lngDelta],
+            [latLng.lat + latDelta, latLng.lng + lngDelta]
+          );
+          
+          map.fitBounds(fallbackBounds, {
+            padding: [50, 50],
+            maxZoom: 11
+          });
+          
+          console.log('✓ Fallback zoom completed');
+        } catch (fallbackError) {
+          console.error('Fallback zoom also failed:', fallbackError);
+        }
+      }
+    }, 500);
+  }
+
+  // Calculate distance (Haversine formula)
+  function calculateDistance(coords1, coords2) {
+    const R = 3959; // Earth radius in miles
+    const dLat = (coords2[0] - coords1[0]) * Math.PI / 180;
+    const dLon = (coords2[1] - coords1[1]) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(coords1[0] * Math.PI / 180) * Math.cos(coords2[0] * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  }
+
+  // Apply member filters
+  function applyMemberFilters() {
+    const status = document.getElementById('filter-status').value;
+    const route = document.getElementById('filter-route').value;
+
+    // Start with current filtered data (which may already be radius-filtered)
+    // If no radius filter applied, use all member data
+    let baseData = filteredData.length > 0 && searchCircle ? filteredData : memberData;
+
+    filteredData = baseData.filter(member => {
+      // Status filter
+      if (status === 'owner' && !member.isOwner) return false;
+      if (status === 'prospect' && !member.isProspect) return false;
+      
+      // Purchase route filter
+      if (route === 'all') return true;
+      if (route === 'SS' && member.route !== 'SS') return false;
+      if (route === 'Outright' && member.route !== 'Outright') return false;
+      if (route === 'Personal Lease' && member.route !== 'Personal Lease') return false;
+      if (route === 'Business Lease' && member.route !== 'Business Lease') return false;
+      if (route === 'other' && ['SS', 'Outright', 'Personal Lease', 'Business Lease'].includes(member.route)) return false;
+      
+      return true;
+    });
+
+    updateResultsSummary();
+    updateMapMarkers();
+  }
+
+  // Update results summary
+  function updateResultsSummary() {
+    const owners = filteredData.filter(m => m.isOwner).length;
+    const prospects = filteredData.filter(m => m.isProspect).length;
+    const ss = filteredData.filter(m => m.route === 'SS').length;
+
+    document.getElementById('result-total').textContent = filteredData.length;
+    document.getElementById('result-owners').textContent = owners;
+    document.getElementById('result-prospects').textContent = prospects;
+    document.getElementById('result-ss').textContent = ss;
+    
+    document.getElementById('results-summary').style.display = 'block';
+  }
+
+  // Update table
+  function updateTable() {
+    const showDetailed = document.getElementById('show-detailed').checked;
+    const tbody = document.getElementById('table-body');
+    tbody.innerHTML = '';
+
+    filteredData.slice(0, 50).forEach(member => {
+      const row = tbody.insertRow();
+      
+      // When detailed is UNCHECKED, anonymize everything
+      // When detailed is CHECKED, show actual data
+      if (showDetailed) {
+        // SHOW DETAILED DATA
+        const statusDisplay = member.isOwner ? 'Owner' : member.isProspect ? 'Prospect' : member.status;
+        
+        row.innerHTML = `
+          <td>${member.location || '—'}</td>
+          <td><strong>${member.postcode || '—'}</strong></td>
+          <td>${statusDisplay}</td>
+          <td>${member.model || '—'}</td>
+          <td>${member.route || '—'}</td>
+          <td>${member.provider || '—'}</td>
+        `;
+      } else {
+        // ANONYMIZED DATA
+        const statusDisplay = member.isOwner ? 'Owner' : member.isProspect ? 'Prospect' : 'Member';
+        
+        row.innerHTML = `
+          <td>${member.location || '—'}</td>
+          <td><strong>${member.postcode || '—'}</strong></td>
+          <td>${statusDisplay}</td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+        `;
+      }
+    });
+
+    if (filteredData.length > 50) {
+      const row = tbody.insertRow();
+      row.innerHTML = `<td colspan="6" style="text-align: center; color: #6B7280; font-style: italic;">
+        Showing first 50 of ${filteredData.length} members
+      </td>`;
+    }
+  }
+</script>
+
+</body>
+</html>
