@@ -321,23 +321,6 @@
         <span class="label">Prospects:</span>
         <span class="value" id="result-prospects">0</span>
       </div>
-    </div>
-  </div>
-    <!-- Results Summary -->
-    <div class="filter-results" id="results-summary" style="display: none;">
-      <h4>📍 Search Results</h4>
-      <div class="filter-stat">
-        <span class="label">Total Members:</span>
-        <span class="value" id="result-total">0</span>
-      </div>
-      <div class="filter-stat">
-        <span class="label">G6 Owners:</span>
-        <span class="value" id="result-owners">0</span>
-      </div>
-      <div class="filter-stat">
-        <span class="label">Prospects:</span>
-        <span class="value" id="result-prospects">0</span>
-      </div>
       <div class="filter-stat">
         <span class="label">Salary Sacrifice:</span>
         <span class="value" id="result-ss">0</span>
@@ -1081,13 +1064,13 @@
 
     console.log(`Updating map markers for ${filteredData.length} members...`);
 
-    // Clear existing markers
-    map.eachLayer(layer => {
-      if (layer instanceof L.Circle || (layer instanceof L.Marker && layer !== dealerMarker)) {
-        map.removeLayer(layer);
-      }
-    });
-
+    // Clear existing markers (but keep dealer marker and label)
+map.eachLayer(layer => {
+  if (layer instanceof L.Circle || (layer instanceof L.Marker && layer !== dealerMarker && layer !== window.dealerLabel)) {
+    map.removeLayer(layer);
+  }
+});
+    
     // Aggregate by postcode or location
     const locationMap = {};
     let mappedCount = 0;
