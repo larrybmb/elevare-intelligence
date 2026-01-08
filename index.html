@@ -231,10 +231,32 @@
       <div class="filter-title">🎯 Dealer Location</div>
       
       <div class="filter-group">
-        <label class="filter-label">Dealer Postcode</label>
-        <input type="text" class="filter-input" id="dealer-postcode" placeholder="e.g., EX14" value="EX14">
+        <label class="filter-label">Select Dealer</label>
+        <select class="filter-select" id="dealer-select" onchange="updateDealerPostcode()">
+          <option value="">-- Select a dealer --</option>
+          <option value="G74 3XH">XPENG Park's (Glasgow)</option>
+          <option value="NG7 2SZ">XPENG Sandicliffe (Nottingham)</option>
+          <option value="NN2 7AH">XPENG Westaway (Northampton)</option>
+          <option value="SO30 3DS">XPENG Peter Cooper (Southampton)</option>
+          <option value="WV10 6HT">XPENG Brindley (Wolverhampton)</option>
+          <option value="DE21 6EN">XPENG Ron Brooks (Derby)</option>
+          <option value="SA43 1LZ">XPENG Cawdor Cars (Cardigan)</option>
+          <option value="AB53 5TA">XPENG Morrison Motors (Aberdeen)</option>
+          <option value="FY4 5PQ">XPENG Cox Motor Group (Blackpool)</option>
+          <option value="EX14 9NE">XPENG Otter Vale Motor Group (Honiton)</option>
+          <option value="SN5 7SB">XPENG Fish Brothers (Swindon)</option>
+        </select>
+      </div>
+
+      <div style="text-align: center; margin: 16px 0; color: #6B7280; font-size: 12px; font-weight: 600;">
+        — OR —
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">Enter Custom Postcode</label>
+        <input type="text" class="filter-input" id="dealer-postcode" placeholder="e.g., EX14 or future location">
         <div style="font-size: 11px; color: #6B7280; margin-top: 6px;">
-          Enter outward postcode
+          For dealers not yet operational
         </div>
       </div>
 
@@ -284,6 +306,23 @@
       <button class="filter-button" onclick="applyMemberFilters()">Apply Filters</button>
     </div>
 
+    <!-- Results Summary -->
+    <div class="filter-results" id="results-summary" style="display: none;">
+      <h4>📍 Search Results</h4>
+      <div class="filter-stat">
+        <span class="label">Total Members:</span>
+        <span class="value" id="result-total">0</span>
+      </div>
+      <div class="filter-stat">
+        <span class="label">G6 Owners:</span>
+        <span class="value" id="result-owners">0</span>
+      </div>
+      <div class="filter-stat">
+        <span class="label">Prospects:</span>
+        <span class="value" id="result-prospects">0</span>
+      </div>
+    </div>
+  </div>
     <!-- Results Summary -->
     <div class="filter-results" id="results-summary" style="display: none;">
       <h4>📍 Search Results</h4>
@@ -726,6 +765,7 @@
   let filteredData = [];
   let dealerMarker = null;
   let searchCircle = null;
+    window.dealerLabel = null;
 
   // COMPLETE UK postcode area coordinates - all 132 areas
   const postcodeCoords = {
@@ -846,6 +886,16 @@
     'Cornwall': [50.2660, -5.0527], 'Abbingdon': [51.6708, -1.2798]
   };
 
+    // Update dealer postcode field when dropdown selection changes
+  function updateDealerPostcode() {
+    const select = document.getElementById('dealer-select');
+    const postcodeInput = document.getElementById('dealer-postcode');
+    
+    if (select.value) {
+      postcodeInput.value = select.value;
+    }
+  }
+  
   // Tab switching
   document.querySelectorAll('.nav-tab').forEach(tab => {
     tab.addEventListener('click', () => {
@@ -1203,7 +1253,22 @@
 
   // Apply dealer filter
   function applyDealerFilter() {
-    const dealerPostcode = document.getElementById('dealer-postcode').value.toUpperCase();
+    // Check if dropdown was used, otherwise use manual input
+    const dealerSelect = document.getElementById('dealer-select');
+    const dealerPostcodeInput = document.getElementById('dealer-postcode');
+    
+    let dealerPostcode = dealerPostcodeInput.value.toUpperCase();
+    
+    // If no manual postcode entered, check dropdown
+    if (!dealerPostcode && dealerSelect.value) {
+      dealerPostcode = dealerSelect.value;
+    }
+    
+    if (!dealerPostcode) {
+      alert('Please select a dealer or enter a postcode');
+      return;
+    }
+    
     const radius = parseFloat(document.getElementById('search-radius').value);
 
     const dealerCoords = getPostcodeCoords(dealerPostcode, dealerPostcode);
@@ -1215,32 +1280,73 @@
     console.log(`Searching ${radius} miles from ${dealerPostcode} at coords:`, dealerCoords);
     console.log(`Total members in dataset: ${memberData.length}`);
 
-    // Remove existing dealer marker and circle
+    // Remove existing dealer marker, label, and circle
     if (dealerMarker) {
       map.removeLayer(dealerMarker);
       dealerMarker = null;
+    }
+    if (window.dealerLabel) {
+      map.removeLayer(window.dealerLabel);
+      window.dealerLabel = null;
     }
     if (searchCircle) {
       map.removeLayer(searchCircle);
       searchCircle = null;
     }
 
-    // Add dealer marker
+    // Add dealer marker - SLEEK PIN STYLE
     dealerMarker = L.marker(dealerCoords, {
+      icon: L.icon({
+        iconUrl: 'data:image/svg+xml;base64,' + btoa(`
+          <svg width="40" height="60" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+                <feOffset dx="0" dy="2" result="offsetblur"/>
+                <feComponentTransfer>
+                  <feFuncA type="linear" slope="0.3"/>
+                </feComponentTransfer>
+                <feMerge>
+                  <feMergeNode/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+            </defs>
+            <path d="M20,5 C11.716,5 5,11.716 5,20 C5,30 20,50 20,50 C20,50 35,30 35,20 C35,11.716 28.284,5 20,5 Z" 
+                  fill="#D4793F" filter="url(#shadow)"/>
+            <circle cx="20" cy="20" r="8" fill="white"/>
+            <text x="20" y="24" font-family="Arial" font-size="14" font-weight="bold" 
+                  fill="#D4793F" text-anchor="middle">🏢</text>
+          </svg>
+        `),
+        iconSize: [40, 60],
+        iconAnchor: [20, 60],
+        popupAnchor: [0, -60]
+      })
+    }).addTo(map);
+
+    // Add elegant floating label above pin
+    const dealerName = dealerSelect.value && dealerSelect.options[dealerSelect.selectedIndex].text 
+      ? dealerSelect.options[dealerSelect.selectedIndex].text.split(' (')[0] 
+      : dealerPostcode;
+
+    window.dealerLabel = L.marker(dealerCoords, {
       icon: L.divIcon({
-        className: 'dealer-marker',
+        className: 'dealer-label',
         html: `<div style="
-          background: #D4793F;
-          color: white;
-          padding: 8px 12px;
-          border-radius: 8px;
-          font-size: 13px;
-          font-weight: 700;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-          border: 3px solid white;
-        ">🏢 Dealer: ${dealerPostcode}</div>`,
-        iconSize: [120, 30],
-        iconAnchor: [60, 15]
+          background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFB 100%);
+          color: #1A3A52;
+          padding: 6px 14px;
+          border-radius: 20px;
+          font-size: 12px;
+          font-weight: 600;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          border: 2px solid #D4793F;
+          white-space: nowrap;
+          letter-spacing: 0.3px;
+        ">${dealerName}</div>`,
+        iconSize: [150, 30],
+        iconAnchor: [75, 75]
       })
     }).addTo(map);
 
@@ -1346,7 +1452,7 @@
       }
     }, 500);
   }
-
+  
   // Calculate distance (Haversine formula)
   function calculateDistance(coords1, coords2) {
     const R = 3959; // Earth radius in miles
